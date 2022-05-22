@@ -278,18 +278,18 @@ describe ChildProcess do
   end
 
   it 'kills the full process tree', :process_builder => false do
-    Tempfile.open('kill-process-tree') do |file|
-      process = write_pid_in_sleepy_grand_child(file.path)
-      process.leader = true
-      process.start
+    rcvr = UDPSocket.new.tap { |s| s.bind '127.0.0.1', 0 }
+    port = rcvr.connect_address.ip_port
 
-      pid = wait_until(30) do
-        Integer(rewind_and_read(file)) rescue nil
-      end
+    process = write_pid_in_sleepy_grand_child port
+    process.leader = true
+    process.start
 
-      process.stop
-      wait_until(3) { expect(alive?(pid)).to eql(false) }
-    end
+    pid = wait_until(30) { Integer(rcvr.recv 16) rescue nil }
+    rcvr.close
+
+    process.stop
+    wait_until(3) { expect(alive?(pid)).to eql(false) }
   end
 
   it 'releases the GIL while waiting for the process' do

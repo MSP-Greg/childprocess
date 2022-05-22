@@ -74,9 +74,10 @@ module ChildProcessSpecHelper
     ruby_process tmp_script(code)
   end
 
-  def write_pid_in_sleepy_grand_child(path)
+  def write_pid_in_sleepy_grand_child(port)
+    cmd = "UDPSocket.new.tap { |s| s.send Process.pid.to_s, 0, '127.0.0.1', #{port} }.tap(&:close); sleep"
     code = <<-RUBY
-      system "ruby", "-e", 'File.open(#{path.inspect}, "w") { |f| f << Process.pid; f.flush }; sleep'
+      system "ruby", "-r", "socket", "-e", "#{cmd}"
     RUBY
 
     ruby_process tmp_script(code)
